@@ -1,5 +1,7 @@
 <?php
+
 // Объявление пространства имен модели
+
 namespace App\Models;
 
 // Импорт базового класса Model из Eloquent ORM

@@ -2,79 +2,113 @@
 
 namespace Tests\Unit;
 
-use PHPUnit\Framework\Attributes\Test;
 use App\Http\Controllers\QRcodeController;
-use App\Models\links;
+use App\Models\Link;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\TestCase;
-use Illuminate\Http\Response;
 
 class QRcodeControllerTest extends TestCase
 {
-    //use RefreshDatabase; // Важно для изоляции тестов
+    use RefreshDatabase;
 
     protected $controller;
 
-    protected function setUp(): void //вызывается перед каждым тестом для подготовки
+    protected function setUp(): void
     {
         parent::setUp();
         $this->controller = new QRcodeController();
     }
 
-    #[Test]
     public function test_create_method()
     {
-        // Явно передаём обязательные поля
         $request = new Request([
-            'url_to' => 'https://required-value.com', // Обязательное поле
-            'url_from' => 'https://optional-value.com'
+            'url_to' => 'https://example.com',
+            'url_from' => 'custom123',
+            'edit_key_hash' => 'hash123', // если поле обязательно
         ]);
 
-        // Для отладки
-        logger()->debug('Test data', $request->all());
+        $response = $this->controller->create($request);
 
-        $this->controller->create($request);
-
-        // Проверяем только обязательное поле
+        $this->assertEquals(201, $response->getStatusCode());
         $this->assertDatabaseHas('links', [
-            'url_to' => 'https://required-value.com'
+            'url_to' => 'https://example.com',
+            'url_from' => 'custom123',
         ]);
     }
 
-    #[Test]
     public function test_edit_method()
     {
-        $link = links::create([
+        $link = Link::create([
             'url_to' => 'old_to',
-            'url_from' => 'old_from'
+            'url_from' => 'old_from',
+            'key' => 'test_key',
         ]);
 
         $request = new Request([
             'url_to' => 'new_to',
-            'url_from' => 'new_from'
+            'url_from' => 'new_from',
+            'key' => 'test_key',
         ]);
 
-        $this->controller->edit($request, $link->id);
+        $response = $this->controller->edit($request, $link->id);
 
-        $updatedLink = links::find($link->id);
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $updatedLink = Link::find($link->id);
         $this->assertEquals('new_to', $updatedLink->url_to);
         $this->assertEquals('new_from', $updatedLink->url_from);
     }
 
-    #[Test]
     public function test_read_method()
     {
-        // Создадим и удалим запись для тестирования мягкого удаления
-        $link = links::create([
-            'url_to' => 'to_delete',
-            'url_from' => 'from_delete'
+        // Сначала создаем активную запись
+        $activeLink = Link::create([
+            'url_to' => 'active',
+            'url_from' => 'test',
+            'key' => 'key1',
+            'edit_key_hash' => 'hash1',
         ]);
-        $link->delete();
+
+        // Затем создаем и удаляем вторую запись
+        $deletedLink = Link::create([
+            'url_to' => 'deleted',
+            'url_from' => 'test',
+            'key' => 'key2',
+            'edit_key_hash' => 'hash2',
+        ]);
+        $deletedLink->delete();
 
         $response = $this->controller->read();
 
-        $this->assertCount(1, $response->getData());
-        $this->assertEquals('to_delete', $response->getData()[0]->url_to);
+        $data = $response->getData();
+        $this->assertCount(2, $data);
+
+        // Проверяем наличие обеих записей без учета порядка
+        $urls = array_column($data, 'url_to');
+        $this->assertContains('active', $urls);
+        $this->assertContains('deleted', $urls);
+    }
+
+    public function test_deleted_method()
+    {
+        $link = Link::create([
+            'url_to' => 'to_delete',
+            'key' => 'valid_key',
+            'edit_key_hash' => 'hash123',
+        ]);
+
+        // Создаем mock запроса
+        $request = new Request([
+            'key' => 'valid_key',
+        ]);
+        $this->app->instance('request', $request);
+
+        $response = $this->controller->deleted($link->id);
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertSoftDeleted('links', [
+            'id' => $link->id,
+        ]);
     }
 }
