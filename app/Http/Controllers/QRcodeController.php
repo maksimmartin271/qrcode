@@ -21,7 +21,7 @@ class QRcodeController extends Controller
         $data = $request->input('data');
         $randomNumber = rand(1, 100);
 
-        return response()->json(['data' => (new QRCode()) ->render($data), 'key' => sha1($randomNumber)]);
+        return response()->json(['data' => (new QRCode()) ->render($data), 'key' => sha1((string)$randomNumber)]);
 
         // Генерация и вывод изображения QR-кода
         //echo (new QRCode)->render($data);
@@ -42,12 +42,12 @@ class QRcodeController extends Controller
     public function redirect($id)
     {
 
-        $link = links::where('url_from', $id)->first();
+        $link = link::where('url_from', $id)->first();
         //$link = links::where('url_from', $id)->take(1)->get();
 
         if (! $link) {
             // Лучше возвращать HTTP-ответ
-            $link = links::find((int)$id);
+            $link = link::find((int)$id);
         }
 
 
@@ -58,7 +58,6 @@ class QRcodeController extends Controller
 
         if (empty($link->url_to)) {
             //if (empty($link[0]->url_to)) {
-            return response()->json($link);
 
             return response("Некорректный URL", 400);
         }
