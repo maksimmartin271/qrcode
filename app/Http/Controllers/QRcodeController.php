@@ -70,6 +70,7 @@ class QRcodeController extends Controller
     public function edit(Request $request, $id)
     {
         $link = Link::find($id);
+        $link->makeVisible('key'); // Раскрываем поле
 
         if (! $link) {
             return response()->json(['error' => 'Link not found'], 404);
@@ -85,6 +86,7 @@ class QRcodeController extends Controller
         ]);
 
         return response()->json($link);
+
     }
 
     public function check()
@@ -101,10 +103,11 @@ class QRcodeController extends Controller
 
     public function create(Request $request)
     {
+       //return response()->json($request);
         $validated = $request->validate([
             'url_to' => 'required|string',
             'url_from' => 'nullable|string',
-            'edit_key_hash' => 'required|string', // Добавляем валидацию
+            //'edit_key_hash' => 'required|string', // Добавляем валидацию
         ]);
 
         $link = Link::create($validated);
@@ -134,12 +137,33 @@ class QRcodeController extends Controller
 
     public function read()
     {
-        return response()->json(Link::withTrashed()->get());
+        return response()->json(Link::all());
     }
 
     public function UnDeleted($id)
     {
-        $links = links::withTrashed()->find($id);
+        $links = Link::withTrashed()->find($id);
         $deleted = $links->restore();
+    }
+
+    public function build($id){
+        $link = $this->getLinkById($id);
+
+        if(!$link){
+            return response()->json(['error' => 'Not found'], 404);
+        }
+        return response()->json(['success' => 'true', 'data' => (new QRCode())->render($link->url_from)]);
+    }
+    public function getLinkById($id){
+        $link = Link::find($id);
+        return $link;
+    }
+    public function show($id){
+        $link = $this->getLinkById($id);
+
+        if(!$link){
+            return response()->json(['error' => 'Not found'], 404);
+        }
+        return '<img src="' . (new QRCode())->render($link) . '" alt="QR Code" />';
     }
 }

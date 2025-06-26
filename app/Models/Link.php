@@ -16,5 +16,6 @@ class Link extends Model
         'edit_key_hash',
     ];
 
-    protected $dates = ['deleted_at'];
+    protected $dates = ['deleted_at'];  
+    //protected $hidden = ['key'];
 }

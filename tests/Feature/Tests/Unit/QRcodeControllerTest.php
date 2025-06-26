@@ -20,6 +20,7 @@ class QRcodeControllerTest extends TestCase
         $this->controller = new QRcodeController();
     }
 
+    #[Test]
     public function test_create_method()
     {
         $request = new Request([
@@ -37,6 +38,7 @@ class QRcodeControllerTest extends TestCase
         ]);
     }
 
+    #[Test]
     public function test_edit_method()
     {
         $link = Link::create([
@@ -60,6 +62,7 @@ class QRcodeControllerTest extends TestCase
         $this->assertEquals('new_from', $updatedLink->url_from);
     }
 
+    #[Test]
     public function test_read_method()
     {
         // Сначала создаем активную запись
@@ -90,6 +93,7 @@ class QRcodeControllerTest extends TestCase
         $this->assertContains('deleted', $urls);
     }
 
+    #[Test]
     public function test_deleted_method()
     {
         $link = Link::create([
